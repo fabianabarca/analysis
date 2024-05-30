@@ -66,6 +66,12 @@ db.sqlite3-journal
 staticfiles/
 migrations/
 
+# Databases
+*.sqlite3
+*.sqlite
+*.db
+*.rdb
+
 # Flask stuff:
 instance/
 .webassets-cache

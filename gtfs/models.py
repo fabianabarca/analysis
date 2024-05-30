@@ -501,13 +501,18 @@ class FeedMessage(models.Model):
 
     This is metadata to link records of other models to a retrieved FeedMessage containing several entities, typically (necessarily, in this implementation) of a single kind.
     """
+    ENTITY_TYPE_CHOICES = (
+        ("trip_update", "TripUpdate"),
+        ("vehicle", "VehiclePosition"),
+        ("alert", "Alert"),
+    )
 
     feed_message_id = models.BigAutoField(primary_key=True)
     provider = models.ForeignKey(
         Provider, on_delete=models.SET_NULL, blank=True, null=True
     )
+    entity_type = models.CharField(max_length=63, choices=ENTITY_TYPE_CHOICES)
     timestamp = models.DateTimeField(auto_now=True)
-    entity_type = models.CharField(max_length=63)
     incrementality = models.CharField(max_length=15)
     gtfs_realtime_version = models.CharField(max_length=15)
 
@@ -603,60 +608,59 @@ class VehiclePosition(models.Model):
     entity_id = models.CharField(max_length=127)
 
     # Foreign key to FeedMessage model
-    feed_message = models.ForeignKey(FeedMessage, on_delete=models.CASCADE)
+    feed_message = models.ForeignKey(FeedMessage, on_delete=models.CASCADE, blank=True, null=True)
 
     # TripDescriptor (message)
-    trip_trip_id = models.CharField(max_length=255)
+    vehicle_trip_trip_id = models.CharField(max_length=255)
     vehicle_trip_route_id = models.CharField(max_length=255, blank=True, null=True)
-    trip_direction_id = models.IntegerField(blank=True, null=True)
-    trip_start_time = models.TimeField(blank=True, null=True)
-    trip_start_date = models.DateField(blank=True, null=True)
-    trip_schedule_relationship = models.CharField(
+    vehicle_trip_direction_id = models.IntegerField(blank=True, null=True)
+    vehicle_trip_start_time = models.TimeField(blank=True, null=True)
+    vehicle_trip_start_date = models.DateField(blank=True, null=True)
+    vehicle_trip_schedule_relationship = models.CharField(
         max_length=31, blank=True, null=True
     )  # (enum)
 
     # VehicleDescriptor (message)
-    vehicle_id = models.CharField(max_length=255, blank=True, null=True)
-    vehicle_label = models.CharField(max_length=255, blank=True, null=True)
-    vehicle_license_plate = models.CharField(max_length=255, blank=True, null=True)
-    vehicle_wheelchair_accessible = models.CharField(
+    vehicle_vehicle_id = models.CharField(max_length=255, blank=True, null=True)
+    vehicle_vehicle_label = models.CharField(max_length=255, blank=True, null=True)
+    vehicle_vehicle_license_plate = models.CharField(max_length=255, blank=True, null=True)
+    vehicle_vehicle_wheelchair_accessible = models.CharField(
         max_length=31, blank=True, null=True
     )  # (enum)
 
     # Position (message)
-    position_latitude = models.FloatField(blank=True, null=True)
-    position_longitude = models.FloatField(blank=True, null=True)
-    position_point = models.PointField(srid=4326, blank=True, null=True)
-    position_bearing = models.FloatField(blank=True, null=True)
-    position_odometer = models.FloatField(blank=True, null=True)
-    position_speed = models.FloatField(blank=True, null=True)  # (meters/second)
+    vehicle_position_latitude = models.FloatField(blank=True, null=True)
+    vehicle_position_longitude = models.FloatField(blank=True, null=True)
+    vehicle_position_point = models.PointField(srid=4326, blank=True, null=True)
+    vehicle_position_bearing = models.FloatField(blank=True, null=True)
+    vehicle_position_odometer = models.FloatField(blank=True, null=True)
+    vehicle_position_speed = models.FloatField(blank=True, null=True)  # (meters/second)
 
     # Current stop sequence (uint32)
-    current_stop_sequence = models.IntegerField(blank=True, null=True)
+    vehicle_current_stop_sequence = models.IntegerField(blank=True, null=True)
 
     # Stop ID (string)
-    stop_id = models.CharField(max_length=255, blank=True, null=True)
+    vehicle_stop_id = models.CharField(max_length=255, blank=True, null=True)
 
     # VehicleStopStatus (enum)
-    current_status = models.CharField(max_length=255, blank=True, null=True)
+    vehicle_current_status = models.CharField(max_length=255, blank=True, null=True)
 
     # Timestamp (uint64)
-    timestamp = models.DateTimeField(blank=True, null=True)
+    vehicle_timestamp = models.DateTimeField(blank=True, null=True)
 
     # CongestionLevel (enum)
-    congestion_level = models.CharField(max_length=255, blank=True, null=True)
+    vehicle_congestion_level = models.CharField(max_length=255, blank=True, null=True)
 
     # OccupancyStatus (enum)
-    occupancy_status = models.CharField(max_length=255, blank=True, null=True)
+    vehicle_occupancy_status = models.CharField(max_length=255, blank=True, null=True)
 
     # OccupancyPercentage (uint32)
-    occupancy_percentage = models.IntegerField(blank=True, null=True)
+    vehicle_occupancy_percentage = models.FloatField(blank=True, null=True)
 
-    # CarriageDetails (message)
-    multi_carriage_details = models.CharField(max_length=255, blank=True, null=True)
+    # CarriageDetails (message): not implemented
 
     def save(self, *args, **kwargs):
-        self.position_point = Point(self.position_longitude, self.position_latitude)
+        self.vehicle_position_point = Point(self.vehicle_position_longitude, self.vehicle_position_latitude)
         super(VehiclePosition, self).save(*args, **kwargs)
 
     def __str__(self):
