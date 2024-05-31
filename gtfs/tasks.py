@@ -42,10 +42,13 @@ def get_vehiclepositions():
         )
         vehicle_positions_df.rename(columns={"id": "entity_id"}, inplace=True)
         vehicle_positions_df["feed_message"] = feed_message
-        vehicle_positions_df.drop(
-            columns=["vehicle_multi_carriage_details"],
-            inplace=True,
-        )
+        try:
+            vehicle_positions_df.drop(
+                columns=["vehicle_multi_carriage_details"],
+                inplace=True,
+            )
+        except:
+            pass
         # Fix entity timestamp
         vehicle_positions_df["vehicle_timestamp"] = pd.to_datetime(
             vehicle_positions_df["vehicle_timestamp"].astype(int), unit="s", utc=True
