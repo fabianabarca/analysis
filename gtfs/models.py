@@ -1,5 +1,6 @@
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
+from datetime import datetime
 
 
 class Provider(models.Model):
@@ -9,6 +10,7 @@ class Provider(models.Model):
     """
 
     provider_id = models.BigAutoField(primary_key=True)
+    code = models.CharField(max_length=31, help_text="Código (típicamente el acrónimo) de la empresa. No debe tener espacios ni símbolos especiales.")
     name = models.CharField(max_length=255, help_text="Nombre de la empresa.")
     description = models.TextField(
         blank=True, null=True, help_text="Descripción de la institución o empresa."
@@ -17,26 +19,29 @@ class Provider(models.Model):
         blank=True, null=True, help_text="Sitio web de la empresa."
     )
     schedule_url = models.URLField(
-        blank=True, null=True, help_text="URL del suministro (Feed) de GTFS Schedule."
+        blank=True, 
+        null=True, 
+        help_text="URL del suministro (Feed) de GTFS Schedule (.zip)."
     )
     trip_updates_url = models.URLField(
         blank=True,
         null=True,
-        help_text="URL del suministro (FeedMessage) Protobuf (.pb) de GTFS Realtime TripUpdates.",
+        help_text="URL del suministro (FeedMessage) de la entidad GTFS Realtime TripUpdates (.pb).",
     )
     vehicle_positions_url = models.URLField(
         blank=True,
         null=True,
-        help_text="URL del suministro (FeedMessage) Protobuf (.pb) de GTFS Realtime VehiclePositions.",
+        help_text="URL del suministro (FeedMessage) de la entidad GTFS Realtime VehiclePositions (.pb).",
     )
     service_alerts_url = models.URLField(
         blank=True,
         null=True,
-        help_text="URL del suministro (FeedMessage) Protobuf (.pb) de GTFS Realtime ServiceAlerts.",
+        help_text="URL del suministro (FeedMessage) de la entidad GTFS Realtime ServiceAlerts (.pb).",
     )
+    timezone = models.CharField(max_length=63, help_text="Zona horaria del proveedor de datos (asume misma zona horaria para todas las agencias). Ejemplo: America/Costa_Rica.")
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.code})"
 
 
 # -------------
@@ -507,7 +512,7 @@ class FeedMessage(models.Model):
         ("alert", "Alert"),
     )
 
-    feed_message_id = models.BigAutoField(primary_key=True)
+    feed_message_id = models.CharField(max_length=63, primary_key=True)
     provider = models.ForeignKey(
         Provider, on_delete=models.SET_NULL, blank=True, null=True
     )
@@ -614,8 +619,8 @@ class VehiclePosition(models.Model):
     vehicle_trip_trip_id = models.CharField(max_length=255)
     vehicle_trip_route_id = models.CharField(max_length=255, blank=True, null=True)
     vehicle_trip_direction_id = models.IntegerField(blank=True, null=True)
-    vehicle_trip_start_time = models.TimeField(blank=True, null=True)
-    vehicle_trip_start_date = models.DateField(blank=True, null=True)
+    vehicle_trip_start_time = models.DurationField(blank=True, null=True)
+    vehicle_trip_start_date = models.DateField(blank=True, null=True, default=datetime.now().date())
     vehicle_trip_schedule_relationship = models.CharField(
         max_length=31, blank=True, null=True
     )  # (enum)
