@@ -6,15 +6,12 @@ channels-redis
 celery[redis]
 django-celery-results
 django-celery-beat
-djangorestframework
-drf-spectacular
 requests
-configparser
 pandas
 geopandas
 gtfs-realtime-bindings
+djangorestframework
+drf-spectacular
 python-decouple
 psycopg2-binary
-sqlalchemy
-logging
 gunicorn

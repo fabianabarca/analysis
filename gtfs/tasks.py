@@ -1,10 +1,6 @@
 from celery import shared_task
-
-import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
-import zipfile
-import io
 import json
 import pandas as pd
 import requests
@@ -21,6 +17,7 @@ def get_vehiclepositions():
         vehicle_positions = gtfs_rt.FeedMessage()
         vehicle_positions_response = requests.get(provider.vehicle_positions_url)
         vehicle_positions.ParseFromString(vehicle_positions_response.content)
+
         feed_message = FeedMessage(
             feed_message_id=f"{provider.code}-vehicle-{vehicle_positions.header.timestamp}",
             provider=provider,
@@ -33,6 +30,7 @@ def get_vehiclepositions():
             gtfs_realtime_version=vehicle_positions.header.gtfs_realtime_version,
         )
         feed_message.save()
+
         vehicle_positions_json = json_format.MessageToJson(
             vehicle_positions, preserving_proto_field_name=True
         )
@@ -42,6 +40,7 @@ def get_vehiclepositions():
         )
         vehicle_positions_df.rename(columns={"id": "entity_id"}, inplace=True)
         vehicle_positions_df["feed_message"] = feed_message
+        # Drop unnecessary columns
         try:
             vehicle_positions_df.drop(
                 columns=["vehicle_multi_carriage_details"],
@@ -64,7 +63,9 @@ def get_vehiclepositions():
         vehicle_positions_df["vehicle_trip_start_time"] = pd.to_timedelta(
             vehicle_positions_df["vehicle_trip_start_time"]
         )
-        vehicle_positions_df["vehicle_trip_start_time"].fillna("00:00:00", inplace=True)
+        vehicle_positions_df["vehicle_trip_start_time"].fillna(
+            timedelta(hours=0, minutes=0, seconds=0), inplace=True
+        )
         # Fix trip direction
         vehicle_positions_df["vehicle_trip_direction_id"].fillna(-1, inplace=True)
         # Fix current stop sequence
