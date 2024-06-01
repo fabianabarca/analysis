@@ -39,6 +39,7 @@ class Provider(models.Model):
         help_text="URL del suministro (FeedMessage) de la entidad GTFS Realtime ServiceAlerts (.pb).",
     )
     timezone = models.CharField(max_length=63, help_text="Zona horaria del proveedor de datos (asume misma zona horaria para todas las agencias). Ejemplo: America/Costa_Rica.")
+    is_active = models.BooleanField(default=False, help_text="¿Está activo el proveedor de datos? Si no, no se importarán los datos de este proveedor.")
 
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -620,7 +621,7 @@ class VehiclePosition(models.Model):
     vehicle_trip_route_id = models.CharField(max_length=255, blank=True, null=True)
     vehicle_trip_direction_id = models.IntegerField(blank=True, null=True)
     vehicle_trip_start_time = models.DurationField(blank=True, null=True)
-    vehicle_trip_start_date = models.DateField(blank=True, null=True, default=datetime.now().date())
+    vehicle_trip_start_date = models.DateField(blank=True, null=True)
     vehicle_trip_schedule_relationship = models.CharField(
         max_length=31, blank=True, null=True
     )  # (enum)
