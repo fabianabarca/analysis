@@ -66,15 +66,20 @@ Group=bucr
 EnvironmentFile=/etc/conf.d/celery
 WorkingDirectory=/home/bucr/analysis/
 RuntimeDirectory=celery
-ExecStart=/bin/sh -c '${CELERY_BIN} -A $CELERY_APP multi start $CELERYD_NODES \
-    --pidfile=${CELERYD_PID_FILE} --logfile=${CELERYD_LOG_FILE} \
-    --loglevel="${CELERYD_LOG_LEVEL}" $CELERYD_OPTS'
+ExecStart=/bin/sh -c '${CELERY_BIN} --app $CELERY_APP multi start $CELERYD_NODES \
+    --pidfile=${CELERYD_PID_FILE} \
+    --logfile=${CELERYD_LOG_FILE} \
+    --loglevel="${CELERYD_LOG_LEVEL}" \
+    $CELERYD_OPTS'
 ExecStop=/bin/sh -c '${CELERY_BIN} multi stopwait $CELERYD_NODES \
-    --pidfile=${CELERYD_PID_FILE} --logfile=${CELERYD_LOG_FILE} \
+    --pidfile=${CELERYD_PID_FILE} \
+    --logfile=${CELERYD_LOG_FILE} \
     --loglevel="${CELERYD_LOG_LEVEL}"'
-ExecReload=/bin/sh -c '${CELERY_BIN} -A $CELERY_APP multi restart $CELERYD_NODES \
-    --pidfile=${CELERYD_PID_FILE} --logfile=${CELERYD_LOG_FILE} \
-    --loglevel="${CELERYD_LOG_LEVEL}" $CELERYD_OPTS'
+ExecReload=/bin/sh -c '${CELERY_BIN} --app $CELERY_APP multi restart $CELERYD_NODES \
+    --pidfile=${CELERYD_PID_FILE} \
+    --logfile=${CELERYD_LOG_FILE} \
+    --loglevel="${CELERYD_LOG_LEVEL}" \
+    $CELERYD_OPTS'
 Restart=always
 
 [Install]
@@ -107,9 +112,10 @@ User=bucr
 Group=bucr
 EnvironmentFile=/etc/conf.d/celery
 WorkingDirectory=/home/bucr/analysis/
-ExecStart=/bin/sh -c '${CELERY_BIN} -A ${CELERY_APP} beat  \
+ExecStart=/bin/sh -c '${CELERY_BIN} --app ${CELERY_APP} beat \
     --pidfile=${CELERYBEAT_PID_FILE} \
-    --logfile=${CELERYBEAT_LOG_FILE} --loglevel=${CELERYD_LOG_LEVEL} \
+    --logfile=${CELERYBEAT_LOG_FILE} \
+    --loglevel=${CELERYD_LOG_LEVEL} \
     --scheduler ${CELERYBEAT_SCHEDULER}'
 Restart=always
 

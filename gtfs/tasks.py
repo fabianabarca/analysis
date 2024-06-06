@@ -30,14 +30,16 @@ def get_vehiclepositions():
             gtfs_realtime_version=vehicle_positions.header.gtfs_realtime_version,
         )
         feed_message.save()
-
+        # Create JSON object
         vehicle_positions_json = json_format.MessageToJson(
             vehicle_positions, preserving_proto_field_name=True
         )
         vehicle_positions_json = json.loads(vehicle_positions_json)
+        # Normalize JSON object with Pandas in a DataFrame
         vehicle_positions_df = pd.json_normalize(
             vehicle_positions_json["entity"], sep="_"
         )
+        # Process DataFrame to comply with database schema
         vehicle_positions_df.rename(columns={"id": "entity_id"}, inplace=True)
         vehicle_positions_df["feed_message"] = feed_message
         # Drop unnecessary columns
@@ -69,7 +71,7 @@ def get_vehiclepositions():
         # Fix trip direction
         vehicle_positions_df["vehicle_trip_direction_id"].fillna(-1, inplace=True)
         # Fix current stop sequence
-        vehicle_positions_df["vehicle_current_stop_sequence"].fillna(0, inplace=True)
+        vehicle_positions_df["vehicle_current_stop_sequence"].fillna(-1, inplace=True)
         # Create vehicle position point
         vehicle_positions_df["vehicle_position_point"] = vehicle_positions_df.apply(
             lambda x: f"POINT ({x.vehicle_position_longitude} {x.vehicle_position_latitude})",
@@ -83,3 +85,74 @@ def get_vehiclepositions():
         VehiclePosition.objects.bulk_create(objects)
 
     return "VehiclePositions saved to database"
+
+
+@shared_task
+def get_tripupdates():
+    providers = Provider.objects.filter(is_active=True)
+    for provider in providers:
+        trip_updates = gtfs_rt.FeedMessage()
+        trip_updates_response = requests.get(provider.trip_updates_url)
+        trip_updates.ParseFromString(trip_updates_response.content)
+
+        feed_message = FeedMessage(
+            feed_message_id=f"{provider.code}-trip_updates-{trip_updates.header.timestamp}",
+            provider=provider,
+            entity_type="trip_updates",
+            timestamp=datetime.fromtimestamp(
+                int(trip_updates.header.timestamp),
+                tz=pytz.timezone(provider.timezone),
+            ),
+            incrementality=trip_updates.header.incrementality,
+            gtfs_realtime_version=trip_updates.header.gtfs_realtime_version,
+        )
+        feed_message.save()
+        # Create JSON object
+        trip_updates_json = json_format.MessageToJson(
+            trip_updates, preserving_proto_field_name=True
+        )
+        trip_updates_json = json.loads(trip_updates_json)
+        # Normalize JSON object with Pandas in a DataFrame
+        trip_updates_df = pd.json_normalize(
+            trip_updates_json["entity"], sep="_"
+        )
+        # Process DataFrame to comply with database schema
+        trip_updates_df.rename(columns={"id": "entity_id"}, inplace=True)
+        trip_updates_df["feed_message"] = feed_message
+        # Drop unnecessary columns
+        try:
+            trip_updates_df.drop(
+                columns=["trip_update_stop_time_update", "trip_update_timestamp"],
+                inplace=True,
+            )
+        except:
+            pass
+        # Save DataFrame as CSV
+        trip_updates_df.to_csv("trip_updates.csv")
+        # Fix entity timestamp
+        #trip_updates_df["trip_update_timestamp"] = pd.to_datetime(
+        #    trip_updates_df["trip_update_timestamp"].astype(int), unit="s", utc=True
+        #)
+        # Fix trip start date
+        trip_updates_df["trip_update_trip_start_date"] = pd.to_datetime(
+            trip_updates_df["trip_update_trip_start_date"], format="%Y%m%d"
+        )
+        trip_updates_df["trip_update_trip_start_date"].fillna(
+            datetime.now().date(), inplace=True
+        )
+        # Fix trip start time
+        trip_updates_df["trip_update_trip_start_time"] = pd.to_timedelta(
+            trip_updates_df["trip_update_trip_start_time"]
+        )
+        trip_updates_df["trip_update_trip_start_time"].fillna(
+            timedelta(hours=0, minutes=0, seconds=0), inplace=True
+        )
+        # Fix trip direction
+        trip_updates_df["trip_update_trip_direction_id"].fillna(-1, inplace=True)
+        # Save to database
+        objects = [
+            TripUpdate(**row)
+            for row in trip_updates_df.to_dict(orient="records")
+        ]
+        TripUpdate.objects.bulk_create(objects)
+    return "TripUpdates saved to database"

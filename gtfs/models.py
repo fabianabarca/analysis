@@ -540,28 +540,28 @@ class TripUpdate(models.Model):
     feed_message = models.ForeignKey("FeedMessage", on_delete=models.CASCADE)
 
     # TripDescriptor (message)
-    trip_trip_id = models.CharField(max_length=255, blank=True, null=True)
-    trip_route_id = models.CharField(max_length=255, blank=True, null=True)
-    trip_direction_id = models.IntegerField(blank=True, null=True)
-    trip_start_time = models.TimeField(blank=True, null=True)
-    trip_start_date = models.DateField(blank=True, null=True)
-    trip_schedule_relationship = models.CharField(
+    trip_update_trip_trip_id = models.CharField(max_length=255, blank=True, null=True)
+    trip_update_trip_route_id = models.CharField(max_length=255, blank=True, null=True)
+    trip_update_trip_direction_id = models.IntegerField(blank=True, null=True)
+    trip_update_trip_start_time = models.DurationField(blank=True, null=True)
+    trip_update_trip_start_date = models.DateField(blank=True, null=True)
+    trip_update_trip_schedule_relationship = models.CharField(
         max_length=31, blank=True, null=True
     )  # (enum)
 
     # VehicleDescriptor (message)
-    vehicle_id = models.CharField(max_length=255, blank=True, null=True)
-    vehicle_label = models.CharField(max_length=255, blank=True, null=True)
-    vehicle_license_plate = models.CharField(max_length=255, blank=True, null=True)
-    vehicle_wheelchair_accessible = models.CharField(
+    trip_update_vehicle_id = models.CharField(max_length=255, blank=True, null=True)
+    trip_update_vehicle_label = models.CharField(max_length=255, blank=True, null=True)
+    trip_update_vehicle_license_plate = models.CharField(max_length=255, blank=True, null=True)
+    trip_update_vehicle_wheelchair_accessible = models.CharField(
         max_length=31, blank=True, null=True
     )  # (enum)
 
     # Timestamp (uint64)
-    timestamp = models.DateTimeField(blank=True, null=True)
+    trip_update_timestamp = models.DateTimeField(blank=True, null=True)
 
     # Delay (int32)
-    delay = models.IntegerField(blank=True, null=True)
+    trip_update_delay = models.IntegerField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.entity_id} ({self.feed_message})"
