@@ -10,7 +10,10 @@ class Provider(models.Model):
     """
 
     provider_id = models.BigAutoField(primary_key=True)
-    code = models.CharField(max_length=31, help_text="Código (típicamente el acrónimo) de la empresa. No debe tener espacios ni símbolos especiales.")
+    code = models.CharField(
+        max_length=31,
+        help_text="Código (típicamente el acrónimo) de la empresa. No debe tener espacios ni símbolos especiales.",
+    )
     name = models.CharField(max_length=255, help_text="Nombre de la empresa.")
     description = models.TextField(
         blank=True, null=True, help_text="Descripción de la institución o empresa."
@@ -19,9 +22,9 @@ class Provider(models.Model):
         blank=True, null=True, help_text="Sitio web de la empresa."
     )
     schedule_url = models.URLField(
-        blank=True, 
-        null=True, 
-        help_text="URL del suministro (Feed) de GTFS Schedule (.zip)."
+        blank=True,
+        null=True,
+        help_text="URL del suministro (Feed) de GTFS Schedule (.zip).",
     )
     trip_updates_url = models.URLField(
         blank=True,
@@ -38,8 +41,14 @@ class Provider(models.Model):
         null=True,
         help_text="URL del suministro (FeedMessage) de la entidad GTFS Realtime ServiceAlerts (.pb).",
     )
-    timezone = models.CharField(max_length=63, help_text="Zona horaria del proveedor de datos (asume misma zona horaria para todas las agencias). Ejemplo: America/Costa_Rica.")
-    is_active = models.BooleanField(default=False, help_text="¿Está activo el proveedor de datos? Si no, no se importarán los datos de este proveedor.")
+    timezone = models.CharField(
+        max_length=63,
+        help_text="Zona horaria del proveedor de datos (asume misma zona horaria para todas las agencias). Ejemplo: America/Costa_Rica.",
+    )
+    is_active = models.BooleanField(
+        default=False,
+        help_text="¿Está activo el proveedor de datos? Si no, no se importarán los datos de este proveedor.",
+    )
 
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -507,6 +516,7 @@ class FeedMessage(models.Model):
 
     This is metadata to link records of other models to a retrieved FeedMessage containing several entities, typically (necessarily, in this implementation) of a single kind.
     """
+
     ENTITY_TYPE_CHOICES = (
         ("trip_update", "TripUpdate"),
         ("vehicle", "VehiclePosition"),
@@ -537,7 +547,7 @@ class TripUpdate(models.Model):
     entity_id = models.CharField(max_length=127)
 
     # Foreign key to FeedMessage model
-    feed_message = models.ForeignKey("FeedMessage", on_delete=models.CASCADE)
+    feed_message = models.ForeignKey(FeedMessage, on_delete=models.CASCADE)
 
     # TripDescriptor (message)
     trip_update_trip_trip_id = models.CharField(max_length=255, blank=True, null=True)
@@ -552,7 +562,9 @@ class TripUpdate(models.Model):
     # VehicleDescriptor (message)
     trip_update_vehicle_id = models.CharField(max_length=255, blank=True, null=True)
     trip_update_vehicle_label = models.CharField(max_length=255, blank=True, null=True)
-    trip_update_vehicle_license_plate = models.CharField(max_length=255, blank=True, null=True)
+    trip_update_vehicle_license_plate = models.CharField(
+        max_length=255, blank=True, null=True
+    )
     trip_update_vehicle_wheelchair_accessible = models.CharField(
         max_length=31, blank=True, null=True
     )  # (enum)
@@ -614,7 +626,9 @@ class VehiclePosition(models.Model):
     entity_id = models.CharField(max_length=127)
 
     # Foreign key to FeedMessage model
-    feed_message = models.ForeignKey(FeedMessage, on_delete=models.CASCADE, blank=True, null=True)
+    feed_message = models.ForeignKey(
+        FeedMessage, on_delete=models.CASCADE, blank=True, null=True
+    )
 
     # TripDescriptor (message)
     vehicle_trip_trip_id = models.CharField(max_length=255)
@@ -629,7 +643,9 @@ class VehiclePosition(models.Model):
     # VehicleDescriptor (message)
     vehicle_vehicle_id = models.CharField(max_length=255, blank=True, null=True)
     vehicle_vehicle_label = models.CharField(max_length=255, blank=True, null=True)
-    vehicle_vehicle_license_plate = models.CharField(max_length=255, blank=True, null=True)
+    vehicle_vehicle_license_plate = models.CharField(
+        max_length=255, blank=True, null=True
+    )
     vehicle_vehicle_wheelchair_accessible = models.CharField(
         max_length=31, blank=True, null=True
     )  # (enum)
@@ -666,8 +682,132 @@ class VehiclePosition(models.Model):
     # CarriageDetails (message): not implemented
 
     def save(self, *args, **kwargs):
-        self.vehicle_position_point = Point(self.vehicle_position_longitude, self.vehicle_position_latitude)
+        self.vehicle_position_point = Point(
+            self.vehicle_position_longitude, self.vehicle_position_latitude
+        )
         super(VehiclePosition, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.entity_id} ({self.feed_message})"
+
+
+class Alert(models.Model):
+    """GTFS Realtime Alert entity v2.0 (normalized).
+
+    Service alerts represent higher level problems with a particular entity and are generally in the form of a textual description of the disruption.
+
+    'active_period' and 'informed_entity' have their own models.
+
+    TranslatedString fields ('cause_detail', 'effect_detail', 'url', 'header_text', 'description_text') are stored in the Translation model.
+
+    'tts_header_text', 'tts_description_text', 'image' and 'image_alternative_text' are omitted.
+    """
+
+    CAUSE_CHOICES = [
+        ("UNKNOWN_CAUSE", "Causa desconocida"),
+        ("OTHER_CAUSE", "Otra causa"),
+        ("TECHNICAL_PROBLEM", "Problema técnico"),
+        ("STRIKE", "Huelga"),
+        ("DEMONSTRATION", "Manifestación"),
+        ("ACCIDENT", "Accidente"),
+        ("HOLIDAY", "Día festivo"),
+        ("WEATHER", "Clima"),
+        ("MAINTENANCE", "Mantenimiento"),
+        ("CONSTRUCTION", "Construcción"),
+        ("POLICE_ACTIVITY", "Actividad policial"),
+        ("MEDICAL_EMERGENCY", "Emergencia médica"),
+    ]
+    EFFECT_CHOICES = [
+        ("NO_SERVICE", "Sin servicio"),
+        ("REDUCED_SERVICE", "Servicio reducido"),
+        ("SIGNIFICANT_DELAYS", "Retrasos significativos"),
+        ("DETOUR", "Desvío"),
+        ("ADDITIONAL_SERVICE", "Servicio adicional"),
+        ("MODIFIED_SERVICE", "Servicio modificado"),
+        ("OTHER_EFFECT", "Otro efecto"),
+        ("UNKNOWN_EFFECT", "Efecto desconocido"),
+        ("STOP_MOVED", "Parada desplazada"),
+        ("NO_EFFECT", "Sin efecto"),
+        ("ACCESSIBILITY_ISSUE", "Problema de accesibilidad"),
+    ]
+    SEVERITY_LEVEL_CHOICES = [
+        ("UNKNOWN_SEVERITY", "Severidad desconocida"),
+        ("INFO", "Información"),
+        ("WARNING", "Advertencia"),
+        ("SEVERE", "Grave"),
+    ]
+
+    id = models.BigAutoField(primary_key=True)
+    entity_id = models.CharField(max_length=127)
+
+    # Foreign key to FeedMessage model
+    feed_message = models.ForeignKey(FeedMessage, on_delete=models.CASCADE)
+
+    # Cause (enum)
+    alert_cause = models.CharField(
+        max_length=255, choices=CAUSE_CHOICES, blank=True, null=True
+    )
+    # Effect (enum)
+    alert_effect = models.CharField(
+        max_length=255, choices=EFFECT_CHOICES, blank=True, null=True
+    )
+    # SeverityLevel (enum)
+    alert_severity_level = models.CharField(
+        max_length=255, choices=SEVERITY_LEVEL_CHOICES, blank=True, null=True
+    )
+
+
+class ActivePeriod(models.Model):
+    """
+    Time when the alert should be shown to the user.
+
+    This model maps the message TimeRange.
+    """
+
+    alert = models.ForeignKey(Alert, on_delete=models.CASCADE)
+    start = models.DateTimeField(blank=True, null=True)
+    end = models.DateTimeField(blank=True, null=True)
+
+
+class InformedEntity(models.Model):
+    """GTFS Realtime InformedEntity message v2.0 (normalized).
+
+    Entities whose users we should notify of this alert. At least one informed_entity must be provided.
+
+    This model maps the message EntitySelector.
+    """
+
+    alert = models.ForeignKey(Alert, on_delete=models.CASCADE)
+    agency_id = models.CharField(max_length=127, blank=True, null=True)
+    route_id = models.CharField(max_length=127, blank=True, null=True)
+    route_type = models.IntegerField(blank=True, null=True)
+    direction_id = models.IntegerField(blank=True, null=True)
+    trip = models.CharField(max_length=127, blank=True, null=True)
+    stop_id = models.CharField(max_length=127, blank=True, null=True)
+
+
+class TranslatedString(models.Model):
+    """GTFS Realtime Translation message v2.0 (normalized).
+
+    An internationalized message containing per-language versions of a snippet of text or a URL.
+
+    Translations fields are stored in the Translation model and are identified by the alert_translated_string field with possible values "cause_detail", "effect_detail", "url", "header_text", "description_text".
+
+    This model maps the messages TranslatedString and Translation.
+    """
+
+    TRANSLATED_STRING_CHOICES = [
+        ("cause_detail", "Detalle de la causa"),
+        ("effect_detail", "Detalle del efecto"),
+        ("url", "URL"),
+        ("header_text", "Texto del encabezado"),
+        ("description_text", "Texto de la descripción"),
+    ]
+
+    alert = models.ForeignKey(Alert, on_delete=models.CASCADE)
+    translated_string = models.CharField(
+        max_length=127, choices=TRANSLATED_STRING_CHOICES, blank=True, null=True
+    )
+
+    translation_text = models.TextField(blank=True, null=True)
+    translation_language = models.CharField(max_length=31, blank=True, null=True)
