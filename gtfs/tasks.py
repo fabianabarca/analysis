@@ -93,10 +93,12 @@ def get_tripupdates():
     for provider in providers:
         try:
             trip_updates_response = requests.get(provider.trip_updates_url, timeout=10)
-            trip_updates_response.raise_for_status()  
+            trip_updates_response.raise_for_status()
         except requests.RequestException as e:
-            print(f"Error fetching trip updates from {provider.trip_updates_url}: {str(e)}")
-            continue  
+            print(
+                f"Error fetching trip updates from {provider.trip_updates_url}: {str(e)}"
+            )
+            continue
 
         # Parse FeedMessage object from Protobuf
         trip_updates = gtfs_rt.FeedMessage()
@@ -118,7 +120,9 @@ def get_tripupdates():
         feed_message.save()
 
         # Build TripUpdate DataFrame
-        trip_updates_json = json_format.MessageToJson(trip_updates, preserving_proto_field_name=True)
+        trip_updates_json = json_format.MessageToJson(
+            trip_updates, preserving_proto_field_name=True
+        )
         trip_updates_json = json.loads(trip_updates_json)
         trip_updates_df = pd.json_normalize(trip_updates_json["entity"], sep="_")
         trip_updates_df.rename(columns={"id": "entity_id"}, inplace=True)
@@ -154,10 +158,14 @@ def get_tripupdates():
                 feed_message=trip_update["feed_message"],
                 trip_update_trip_trip_id=trip_update["trip_update_trip_trip_id"],
                 trip_update_trip_route_id=trip_update["trip_update_trip_route_id"],
-                trip_update_trip_direction_id=trip_update["trip_update_trip_direction_id"],
+                trip_update_trip_direction_id=trip_update[
+                    "trip_update_trip_direction_id"
+                ],
                 trip_update_trip_start_time=trip_update["trip_update_trip_start_time"],
                 trip_update_trip_start_date=trip_update["trip_update_trip_start_date"],
-                trip_update_trip_schedule_relationship=trip_update["trip_update_trip_schedule_relationship"],
+                trip_update_trip_schedule_relationship=trip_update[
+                    "trip_update_trip_schedule_relationship"
+                ],
                 trip_update_vehicle_id=trip_update["trip_update_vehicle_id"],
                 trip_update_vehicle_label=trip_update["trip_update_vehicle_label"],
                 # trip_update_vehicle_license_plate=trip_update["trip_update_vehicle_license_plate"],
@@ -167,7 +175,7 @@ def get_tripupdates():
             )
             # Save this TripUpdate object
             this_trip_update.save()
-            
+
             # Build StopTimeUpdate DataFrame
             stop_time_updates_json = str(trip_update["trip_update_stop_time_update"])
             stop_time_updates_json = stop_time_updates_json.replace("'", '"')
@@ -189,7 +197,9 @@ def get_tripupdates():
                     datetime.now().timestamp(), inplace=True
                 )
                 stop_time_updates_df["departure_time"] = pd.to_datetime(
-                    stop_time_updates_df["departure_time"].astype(int), unit="s", utc=True
+                    stop_time_updates_df["departure_time"].astype(int),
+                    unit="s",
+                    utc=True,
                 )
             # Fix arrival uncertainty
             if "arrival_uncertainty" in stop_time_updates_df.columns:
@@ -203,7 +213,7 @@ def get_tripupdates():
             # Fix departure delay
             if "departure_delay" in stop_time_updates_df.columns:
                 stop_time_updates_df["departure_delay"].fillna(0, inplace=True)
-            
+
             # Save to database
             objects = [
                 StopTimeUpdate(**row)
