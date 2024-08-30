@@ -104,7 +104,7 @@ This process is configured below.
 ```ini title="/etc/systemd/system/celerybeat.service"
 [Unit]
 Description=Celery Beat Service
-After=network.target
+After=network.target celery.service
 
 [Service]
 Type=simple
